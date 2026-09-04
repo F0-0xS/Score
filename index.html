@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101217">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Score">
+  <meta name="description" content="Tableau de scores simple pour vos jeux de société.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>Score</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button id="back-button" class="icon-button is-hidden" type="button" aria-label="Retour">‹</button>
+      <h1 id="page-title">Score</h1>
+      <button id="settings-button" class="icon-button" type="button" aria-label="Réglages">⚙</button>
+    </header>
+
+    <main id="app" aria-live="polite">
+      <section id="home-screen" class="screen active" data-title="Score">
+        <div class="hero">
+          <img class="hero-icon" src="icons/icon-192.png" alt="" width="88" height="88">
+          <p>Les points, sans les comptes d’apothicaire.</p>
+        </div>
+        <div id="resume-card" class="panel resume-card is-hidden"></div>
+        <button id="new-game-button" class="button primary jumbo" type="button">Nouvelle partie</button>
+        <button id="history-button" class="button secondary" type="button">Historique</button>
+      </section>
+
+      <section id="setup-screen" class="screen" data-title="Nouvelle partie">
+        <form id="setup-form" novalidate>
+          <div class="field-group">
+            <label for="game-name">Nom du jeu <span class="optional">(facultatif)</span></label>
+            <div class="input-with-action">
+              <input id="game-name" type="text" maxlength="80" autocomplete="off" placeholder="Ex. Skyjo">
+              <button class="mic-button small voice-control" type="button" data-voice="game" aria-label="Dicter le nom du jeu">🎙</button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="player-count">Nombre de joueurs</label>
+            <select id="player-count">
+              <option>2</option><option>3</option><option selected>4</option><option>5</option>
+              <option>6</option><option>7</option><option>8</option><option>9</option>
+              <option>10</option><option>11</option><option>12</option>
+            </select>
+          </div>
+
+          <fieldset class="field-group">
+            <legend class="legend-row">
+              <span>Joueurs</span>
+              <button class="voice-link voice-control" type="button" data-voice="players">🎙 Dicter tous les noms</button>
+            </legend>
+            <div id="player-fields" class="player-fields"></div>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend>Mode de score</legend>
+            <div class="choice-grid">
+              <label class="choice-card"><input type="radio" name="mode" value="rounds" checked><span><strong>Manches</strong><small>Une ligne par manche</small></span></label>
+              <label class="choice-card"><input type="radio" name="mode" value="cumulative"><span><strong>Cumul</strong><small>Ajouter ou retirer des points</small></span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend>Qui gagne ?</legend>
+            <div class="choice-grid">
+              <label class="choice-card"><input type="radio" name="direction" value="high" checked><span><strong>Le plus haut</strong><small>Maximum de points</small></span></label>
+              <label class="choice-card"><input type="radio" name="direction" value="low"><span><strong>Le plus bas</strong><small>Minimum de points</small></span></label>
+            </div>
+          </fieldset>
+
+          <p id="setup-error" class="form-error" role="alert"></p>
+          <button class="button primary jumbo" type="submit">Commencer</button>
+        </form>
+      </section>
+
+      <section id="game-screen" class="screen game-screen" data-title="Partie">
+        <div id="game-heading" class="game-heading"></div>
+        <section id="ranking" class="ranking" aria-label="Classement"></section>
+        <div id="game-content"></div>
+        <button id="game-mic" class="mic-button main-mic voice-control" type="button" data-voice="scores">
+          <span class="mic-symbol">🎙</span><span class="mic-label">Dicter les scores</span>
+        </button>
+        <button id="finish-game" class="button danger" type="button">Terminer la partie</button>
+      </section>
+
+      <section id="history-screen" class="screen" data-title="Historique">
+        <div id="history-list" class="history-list"></div>
+      </section>
+
+      <section id="history-detail-screen" class="screen" data-title="Partie archivée">
+        <div id="history-detail"></div>
+      </section>
+
+      <section id="settings-screen" class="screen" data-title="Réglages">
+        <div class="panel settings-panel">
+          <h2>Données</h2>
+          <p id="history-count"></p>
+          <button id="clear-history" class="button danger" type="button">Vider l’historique</button>
+        </div>
+        <div class="panel settings-panel">
+          <h2>Installation</h2>
+          <p>Dans Safari, touchez <strong>Partager</strong>, puis <strong>Sur l’écran d’accueil</strong>.</p>
+        </div>
+        <p class="version">Score · fonctionne hors ligne</p>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="voice-dialog" class="dialog">
+    <form method="dialog" id="voice-form">
+      <div class="dialog-header">
+        <div><span class="eyebrow">Vérification</span><h2>J’ai compris…</h2></div>
+        <button class="icon-button" value="cancel" aria-label="Fermer">×</button>
+      </div>
+      <p id="voice-transcript" class="transcript"></p>
+      <div id="voice-values" class="voice-values"></div>
+      <p id="voice-dialog-error" class="form-error"></p>
+      <div class="dialog-actions">
+        <button class="button secondary" value="cancel">Annuler</button>
+        <button id="confirm-voice" class="button primary" value="default">Valider</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="assertive"></div>
+  <aside id="storage-warning" class="storage-warning is-hidden" role="alertdialog" aria-label="Stockage plein">
+    <strong>Stockage presque plein</strong>
+    <p id="storage-message"></p>
+    <div>
+      <button id="purge-history" class="button danger compact" type="button">Purger l’historique</button>
+      <button id="dismiss-storage" class="button secondary compact" type="button">Plus tard</button>
+    </div>
+  </aside>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
