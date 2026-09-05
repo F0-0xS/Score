@@ -36,6 +36,11 @@
     voiceTranscript: document.querySelector("#voice-transcript"),
     voiceValues: document.querySelector("#voice-values"),
     voiceError: document.querySelector("#voice-dialog-error"),
+    manualVoiceDialog: document.querySelector("#manual-voice-dialog"),
+    manualVoiceForm: document.querySelector("#manual-voice-form"),
+    manualVoiceHelp: document.querySelector("#manual-voice-help"),
+    manualTranscript: document.querySelector("#manual-transcript"),
+    manualVoiceError: document.querySelector("#manual-voice-error"),
     toast: document.querySelector("#toast"),
     storageWarning: document.querySelector("#storage-warning"),
     storageMessage: document.querySelector("#storage-message")
@@ -47,8 +52,8 @@
   let activeHistoryId = null;
   let setupDraft = null;
   let recognition = null;
+  let cancelRecognition = null;
   let voiceContext = null;
-  let voiceResultReceived = false;
   let pendingVoiceEntries = [];
   let pendingStorageRetry = null;
   let toastTimer = null;
@@ -728,52 +733,77 @@
 
   function configureVoiceSupport() {
     document.querySelectorAll(".voice-control").forEach(button => {
-      button.classList.toggle("is-hidden", !SpeechRecognition);
+      button.dataset.directVoice = SpeechRecognition ? "true" : "false";
+      if (!SpeechRecognition) {
+        button.title = "Utiliser la dictée du clavier";
+        const label = button.querySelector(".mic-label");
+        if (label) label.textContent = "Dicter ou saisir les scores";
+      }
     });
   }
 
   function startVoice(context, button) {
-    if (!SpeechRecognition) return voiceFallback(context, "La reconnaissance vocale n’est pas disponible sur ce navigateur.");
-    if (recognition) {
-      recognition.abort();
-      recognition = null;
+    if (!SpeechRecognition) {
+      return openManualVoice(context, "La reconnaissance directe n’est pas disponible dans ce navigateur.");
     }
+    // Un second appui arrête une écoute qui tarde et bascule vers la saisie sûre.
+    if (cancelRecognition) return cancelRecognition("Écoute arrêtée.");
+
     voiceContext = context;
-    voiceResultReceived = false;
-    recognition = new SpeechRecognition();
-    recognition.lang = "fr-FR";
-    recognition.interimResults = false;
-    recognition.continuous = false;
-    recognition.maxAlternatives = 1;
+    const instance = new SpeechRecognition();
+    recognition = instance;
+    let settled = false;
+    let timeout = null;
+    instance.lang = "fr-FR";
+    instance.interimResults = false;
+    instance.continuous = false;
+    instance.maxAlternatives = 1;
     button.classList.add("listening");
     const originalLabel = button.querySelector(".mic-label")?.textContent;
     if (button.querySelector(".mic-label")) button.querySelector(".mic-label").textContent = "J’écoute…";
 
     const cleanup = () => {
+      clearTimeout(timeout);
       button.classList.remove("listening");
       if (originalLabel) button.querySelector(".mic-label").textContent = originalLabel;
-      recognition = null;
+      if (recognition === instance) recognition = null;
+      if (cancelRecognition === cancel) cancelRecognition = null;
     };
 
-    recognition.onresult = event => {
-      voiceResultReceived = true;
+    const cancel = message => {
+      if (settled) return;
+      settled = true;
+      instance.abort();
+      cleanup();
+      openManualVoice(context, message);
+    };
+    cancelRecognition = cancel;
+
+    instance.onresult = event => {
+      if (settled) return;
+      settled = true;
       const transcript = event.results[0][0].transcript.trim();
       cleanup();
       processVoiceResult(context, transcript);
     };
-    recognition.onerror = event => {
-      voiceResultReceived = true;
+    instance.onerror = event => {
+      if (settled) return;
+      settled = true;
       cleanup();
       const denied = event.error === "not-allowed" || event.error === "service-not-allowed";
       voiceFallback(context, denied ? "L’accès au micro a été refusé." : "La dictée n’a pas abouti.");
     };
-    recognition.onend = () => {
+    instance.onend = () => {
+      if (settled) return;
+      settled = true;
       cleanup();
-      if (!voiceResultReceived) voiceFallback(context, "Aucun mot n’a été reconnu.");
+      voiceFallback(context, "Aucun mot n’a été reconnu.");
     };
     try {
-      recognition.start();
+      instance.start();
+      timeout = setTimeout(() => cancel("L’écoute a expiré."), 15000);
     } catch (error) {
+      settled = true;
       cleanup();
       voiceFallback(context, "Le micro n’a pas pu démarrer.");
     }
@@ -802,17 +832,37 @@
   }
 
   function voiceFallback(context, message) {
-    toast(`${message} Utilisez la dictée du clavier.`);
-    if (context === "game") return els.gameName.focus();
-    if (context === "players") return els.playerFields.querySelector("input")?.focus();
-    if (context === "scores") {
-      if (currentGame?.mode === "rounds") {
-        const round = currentGame.rounds.length - 1;
-        document.querySelector(`[data-round="${round}"][data-player="0"]`)?.focus();
-      } else {
-        document.querySelector("[data-custom='0']")?.focus();
-      }
+    toast(`${message} La saisie de secours est ouverte.`);
+    openManualVoice(context, message);
+  }
+
+  function openManualVoice(context, message = "") {
+    voiceContext = context;
+    const examples = {
+      game: "Dictez ou saisissez le nom du jeu.",
+      players: "Exemple : Marie, Paul, Sophie et Thomas.",
+      scores: currentGame
+        ? `Exemple : ${currentGame.players.slice(0, 3).map((player, index) => `${player.name} ${["douze", "moins trois", "vingt-cinq"][index]}`).join(", ")}.`
+        : "Dictez un prénom suivi de son score."
+    };
+    els.manualVoiceHelp.textContent = [message, examples[context]].filter(Boolean).join(" ");
+    els.manualVoiceError.textContent = "";
+    els.manualTranscript.value = "";
+    els.manualTranscript.placeholder = context === "scores" ? "Marie douze, Paul moins trois…" : "Touchez ici pour dicter…";
+    if (!els.manualVoiceDialog.open) els.manualVoiceDialog.showModal();
+    requestAnimationFrame(() => els.manualTranscript.focus());
+  }
+
+  function submitManualVoice(event) {
+    event.preventDefault();
+    const transcript = els.manualTranscript.value.trim();
+    if (!transcript) {
+      els.manualVoiceError.textContent = "Dictez ou saisissez quelque chose avant d’analyser.";
+      els.manualTranscript.focus();
+      return;
     }
+    els.manualVoiceDialog.close();
+    processVoiceResult(voiceContext, transcript);
   }
 
   function openVoiceConfirmation(transcript, entries) {
@@ -880,6 +930,13 @@
   document.querySelector("#finish-game").addEventListener("click", finishGame);
   document.querySelector("#clear-history").addEventListener("click", clearHistory);
   document.querySelector("#confirm-voice").addEventListener("click", confirmVoiceScores);
+  els.manualVoiceForm.addEventListener("submit", submitManualVoice);
+  document.querySelector("#close-manual-voice").addEventListener("click", () => els.manualVoiceDialog.close());
+  document.querySelector("#cancel-manual-voice").addEventListener("click", () => els.manualVoiceDialog.close());
+  document.querySelector("#manual-score-entry").addEventListener("click", () => {
+    if (cancelRecognition) cancelRecognition("Dictée directe arrêtée.");
+    else openManualVoice("scores");
+  });
   document.querySelector("#purge-history").addEventListener("click", purgeHistoryForStorage);
   document.querySelector("#dismiss-storage").addEventListener("click", hideStorageWarning);
 

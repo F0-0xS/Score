@@ -34,11 +34,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 
 button, input, select { min-height: 44px; }
-input, select { font-size: 16px; }
+input, select, textarea { font-size: 16px; }
 
 .app-shell {
   width: min(100%, 760px);
@@ -138,7 +138,7 @@ main { padding: 20px 16px calc(28px + env(safe-area-inset-bottom)); }
 .field-group { min-width: 0; margin: 0 0 25px; padding: 0; border: 0; }
 label, legend { display: block; margin: 0 0 9px; font-weight: 700; }
 .optional { color: var(--muted); font-size: 13px; font-weight: 500; }
-input, select {
+input, select, textarea {
   width: 100%;
   padding: 12px 14px;
   border: 1px solid var(--line);
@@ -148,7 +148,8 @@ input, select {
   color: var(--text);
 }
 input::placeholder { color: #777d89; }
-input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(255 112 72 / 16%); }
+textarea { resize: vertical; line-height: 1.45; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(255 112 72 / 16%); }
 .input-with-action { display: grid; grid-template-columns: minmax(0, 1fr) 50px; gap: 8px; }
 
 .mic-button {
@@ -229,6 +230,7 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px r
 
 .main-mic { display: flex; width: 100%; min-height: 62px; align-items: center; justify-content: center; gap: 9px; margin: 18px 0 10px; border-radius: 18px; font-size: 17px; }
 .mic-symbol { font-size: 24px; }
+.manual-score-entry { display: block; width: 100%; margin: -2px 0 10px; padding: 7px 10px; border: 0; background: transparent; color: var(--muted); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 
 .history-list { display: grid; gap: 10px; }
 .history-item { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; align-items: stretch; }
@@ -262,6 +264,9 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px r
 .dialog-header h2 { margin: 2px 0 0; }
 .eyebrow { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .transcript { padding: 10px 12px; border-radius: 11px; background: #12141a; color: var(--muted); font-style: italic; line-height: 1.4; }
+.manual-help { margin: 14px 0; color: var(--muted); line-height: 1.45; }
+.keyboard-hint { margin: 9px 0 14px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+#manual-transcript { min-height: 116px; }
 .voice-values { display: grid; gap: 9px; margin: 15px 0; }
 .voice-row { display: grid; grid-template-columns: minmax(0, 1fr) 100px; align-items: center; gap: 10px; }
 .voice-row label { overflow: hidden; margin: 0; text-overflow: ellipsis; white-space: nowrap; }

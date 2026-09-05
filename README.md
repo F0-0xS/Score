@@ -19,7 +19,7 @@ L’application doit être servie en HTTPS pour activer le service worker et la 
 3. Choisissez **Sur l’écran d’accueil**.
 4. Vérifiez le nom « Score », puis touchez **Ajouter**.
 
-Après une première ouverture en ligne, l’interface et les parties restent disponibles hors ligne. La reconnaissance vocale dépend toutefois du navigateur et d’une connexion réseau. Si elle n’est pas disponible, tous les scores peuvent être saisis au clavier.
+Après une première ouverture en ligne, l’interface et les parties restent disponibles hors ligne. La reconnaissance vocale directe dépend toutefois du navigateur et d’une connexion réseau. Si elle ne démarre pas, touchez **La dictée ne démarre pas ? Saisir le texte**, puis utilisez le micro du clavier de l’iPhone : le texte passe par le même écran de vérification avant d’être ajouté aux scores.
 
 ## Développement local
 

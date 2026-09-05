@@ -88,6 +88,7 @@
         <button id="game-mic" class="mic-button main-mic voice-control" type="button" data-voice="scores">
           <span class="mic-symbol">🎙</span><span class="mic-label">Dicter les scores</span>
         </button>
+        <button id="manual-score-entry" class="manual-score-entry" type="button">La dictée ne démarre pas ? Saisir le texte</button>
         <button id="finish-game" class="button danger" type="button">Terminer la partie</button>
       </section>
 
@@ -126,6 +127,24 @@
       <div class="dialog-actions">
         <button class="button secondary" value="cancel">Annuler</button>
         <button id="confirm-voice" class="button primary" value="default">Valider</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="manual-voice-dialog" class="dialog">
+    <form id="manual-voice-form">
+      <div class="dialog-header">
+        <div><span class="eyebrow">Saisie de secours</span><h2>Dicter avec le clavier</h2></div>
+        <button id="close-manual-voice" class="icon-button" type="button" aria-label="Fermer">×</button>
+      </div>
+      <p id="manual-voice-help" class="manual-help"></p>
+      <label for="manual-transcript">Texte reconnu</label>
+      <textarea id="manual-transcript" rows="4" autocomplete="off" autocapitalize="sentences"></textarea>
+      <p class="keyboard-hint">Touchez le champ, puis le micro du clavier de l’iPhone. Vous pouvez aussi saisir le texte.</p>
+      <p id="manual-voice-error" class="form-error"></p>
+      <div class="dialog-actions">
+        <button id="cancel-manual-voice" class="button secondary" type="button">Annuler</button>
+        <button class="button primary" type="submit">Analyser</button>
       </div>
     </form>
   </dialog>
