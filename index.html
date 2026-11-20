@@ -31,6 +31,7 @@
         <div id="resume-card" class="panel resume-card is-hidden"></div>
         <button id="new-game-button" class="button primary jumbo" type="button">Nouvelle partie</button>
         <button id="history-button" class="button secondary" type="button">Historique</button>
+        <button id="backup-reminder" class="backup-reminder is-hidden" type="button"></button>
       </section>
 
       <section id="setup-screen" class="screen" data-title="Nouvelle partie">
@@ -101,6 +102,14 @@
       </section>
 
       <section id="settings-screen" class="screen" data-title="Réglages">
+        <div class="panel settings-panel">
+          <h2>Sauvegarde</h2>
+          <p>Tes parties vivent seulement dans ce navigateur. Garde une copie dans Fichiers ou iCloud pour ne rien perdre.</p>
+          <p id="backup-status"></p>
+          <button id="backup-export" class="button primary" type="button">💾 Sauvegarder mes parties</button>
+          <button id="backup-import" class="button secondary" type="button">Restaurer une sauvegarde</button>
+          <input id="backup-file" type="file" accept="application/json,.json" hidden>
+        </div>
         <div class="panel settings-panel">
           <h2>Données</h2>
           <p id="history-count"></p>

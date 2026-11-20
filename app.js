@@ -236,6 +236,7 @@
   }
 
   function renderHome() {
+    renderBackupStatus();
     if (!currentGame) {
       els.resume.classList.add("is-hidden");
       els.resume.innerHTML = "";
@@ -571,7 +572,128 @@
     toast("Partie supprimée.");
   }
 
+  // ---------------------------------------------------------------------------
+  // Sauvegarde dans un fichier (export / restauration)
+  // ---------------------------------------------------------------------------
+
+  const BACKUP_KEY = "score.lastBackup.v1";
+  const BACKUP_DAYS = 30;
+
+  function lastBackupDate() {
+    try {
+      const raw = localStorage.getItem(BACKUP_KEY);
+      const date = raw ? new Date(raw) : null;
+      return date && !Number.isNaN(date.getTime()) ? date : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function backupIsOld() {
+    if (!history.length && !currentGame) return false;
+    const last = lastBackupDate();
+    return !last || Date.now() - last.getTime() > BACKUP_DAYS * 86400000;
+  }
+
+  function renderBackupStatus() {
+    const status = document.querySelector("#backup-status");
+    const last = lastBackupDate();
+    if (status) status.textContent = last ? `Dernière sauvegarde : ${formatDate(last)}.` : "Aucune sauvegarde pour l’instant.";
+    const reminder = document.querySelector("#backup-reminder");
+    if (reminder) {
+      const old = backupIsOld();
+      reminder.classList.toggle("is-hidden", !old);
+      reminder.textContent = last ? "💾 Pense à sauvegarder tes parties (plus d’un mois)" : "💾 Sauvegarde tes parties en un geste";
+    }
+  }
+
+  async function exportBackup() {
+    const stamp = new Date();
+    const payload = {
+      app: "score",
+      format: 1,
+      exportedAt: stamp.toISOString(),
+      current: currentGame || null,
+      history: Array.isArray(history) ? history : []
+    };
+    const day = stamp.toISOString().slice(0, 10);
+    const name = `score-sauvegarde-${day}.json`;
+    const text = JSON.stringify(payload, null, 2);
+    const blob = new Blob([text], { type: "application/json" });
+    let done = false;
+    try {
+      const file = new File([blob], name, { type: "application/json" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Sauvegarde Score" });
+        done = true;
+      }
+    } catch (error) {
+      if (error && error.name === "AbortError") return;
+    }
+    if (!done) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+    try {
+      localStorage.setItem(BACKUP_KEY, stamp.toISOString());
+    } catch (error) {
+      console.warn("Date de sauvegarde non enregistrée", error);
+    }
+    renderBackupStatus();
+    toast("Sauvegarde prête : garde le fichier dans Fichiers ou iCloud.");
+  }
+
+  function historyKey(item) {
+    return item && (item.id || `${item.finishedAt || ""}|${item.name || ""}`);
+  }
+
+  function importBackup(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try {
+        data = JSON.parse(String(reader.result || ""));
+      } catch (error) {
+        return toast("Ce fichier n’est pas une sauvegarde Score.");
+      }
+      if (!data || data.app !== "score" || !Array.isArray(data.history)) {
+        return toast("Ce fichier n’est pas une sauvegarde Score.");
+      }
+      const valid = data.history.filter(item => item && Array.isArray(item.players) && item.mode);
+      const known = new Set(history.map(historyKey));
+      const added = valid.filter(item => !known.has(historyKey(item)));
+      const merged = [...history, ...added]
+        .sort((a, b) => String(b.finishedAt || "").localeCompare(String(a.finishedAt || "")))
+        .slice(0, MAX_HISTORY);
+      let restoredCurrent = false;
+      const incoming = data.current && Array.isArray(data.current.players) && data.current.mode ? data.current : null;
+      if (incoming && (!currentGame || (currentGame.id !== incoming.id && window.confirm("La sauvegarde contient une partie en cours. Remplacer la partie en cours actuelle ?")))) {
+        if (!currentGame || currentGame.id !== incoming.id) {
+          currentGame = incoming;
+          restoredCurrent = persistCurrent();
+        }
+      }
+      if (!persistHistory(merged)) return;
+      renderSettings();
+      renderHome();
+      const parts = [];
+      parts.push(added.length ? `${added.length} partie${added.length > 1 ? "s" : ""} ajoutée${added.length > 1 ? "s" : ""}` : "aucune nouvelle partie");
+      if (restoredCurrent) parts.push("partie en cours restaurée");
+      toast(`Restauration : ${parts.join(", ")}.`);
+    };
+    reader.onerror = () => toast("Lecture du fichier impossible.");
+    reader.readAsText(file);
+  }
+
   function renderSettings() {
+    renderBackupStatus();
     els.historyCount.textContent = history.length
       ? `${history.length} partie${history.length > 1 ? "s" : ""} archivée${history.length > 1 ? "s" : ""} sur 100 maximum.`
       : "Aucune partie archivée.";
@@ -929,6 +1051,16 @@
   els.setupForm.addEventListener("submit", submitSetup);
   document.querySelector("#finish-game").addEventListener("click", finishGame);
   document.querySelector("#clear-history").addEventListener("click", clearHistory);
+  document.querySelector("#backup-export").addEventListener("click", exportBackup);
+  document.querySelector("#backup-import").addEventListener("click", () => document.querySelector("#backup-file").click());
+  document.querySelector("#backup-file").addEventListener("change", event => {
+    importBackup(event.target.files && event.target.files[0]);
+    event.target.value = "";
+  });
+  document.querySelector("#backup-reminder").addEventListener("click", () => {
+    renderSettings();
+    showScreen("settings-screen");
+  });
   document.querySelector("#confirm-voice").addEventListener("click", confirmVoiceScores);
   els.manualVoiceForm.addEventListener("submit", submitManualVoice);
   document.querySelector("#close-manual-voice").addEventListener("click", () => els.manualVoiceDialog.close());

@@ -293,3 +293,5 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+.backup-reminder { border: 1px dashed var(--line); background: transparent; color: var(--muted); border-radius: 14px; padding: 12px 14px; font: inherit; font-size: 15px; min-height: 44px; }
