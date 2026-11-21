@@ -295,3 +295,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 }
 
 .backup-reminder { border: 1px dashed var(--line); background: transparent; color: var(--muted); border-radius: 14px; padding: 12px 14px; font: inherit; font-size: 15px; min-height: 44px; }
+
+.undo-bar { margin: 0 0 12px; }
+.undo-bar .button { margin: 0; width: 100%; min-height: 44px; }
+.undo-bar .button:disabled { opacity: .45; }

@@ -49,6 +49,10 @@
   let currentGame = readJSON(CURRENT_KEY, null);
   let history = readJSON(HISTORY_KEY, []);
   let activeScreen = "home-screen";
+  // Annulation des saisies en mode cumul : mémoire seulement, rien n'est ajouté aux données v1.
+  let scoreUndo = [];
+  let scoreUndoGameId = null;
+  let wakeLock = null;
   let activeHistoryId = null;
   let setupDraft = null;
   let recognition = null;
@@ -213,6 +217,7 @@
 
   function showScreen(name) {
     activeScreen = name;
+    updateWakeLock();
     screens.forEach(screen => screen.classList.toggle("active", screen.id === name));
     const screen = document.getElementById(name);
     els.title.textContent = screen?.dataset.title || "Score";
@@ -325,6 +330,39 @@
   // ---------------------------------------------------------------------------
   // Partie et classement
   // ---------------------------------------------------------------------------
+
+  async function updateWakeLock() {
+    if (!("wakeLock" in navigator)) return;
+    try {
+      if (activeScreen === "game-screen" && document.visibilityState === "visible") {
+        if (!wakeLock) {
+          wakeLock = await navigator.wakeLock.request("screen");
+          wakeLock.addEventListener("release", () => { wakeLock = null; });
+        }
+      } else if (wakeLock) {
+        await wakeLock.release();
+        wakeLock = null;
+      }
+    } catch (error) {
+      wakeLock = null;
+    }
+  }
+  document.addEventListener("visibilitychange", updateWakeLock);
+
+  function updateUndoButton() {
+    const button = document.querySelector("#undo-score");
+    if (button) button.disabled = !scoreUndo.length;
+  }
+
+  function undoLastScore() {
+    const last = scoreUndo.pop();
+    if (!last || !currentGame || currentGame.id !== scoreUndoGameId) return updateUndoButton();
+    currentGame.totals[last.playerIndex] = asScore(currentGame.totals[last.playerIndex]) - last.delta;
+    persistCurrent();
+    refreshLiveScores();
+    updateUndoButton();
+    toast("Dernière saisie annulée.");
+  }
 
   function openGame() {
     if (!currentGame) return;
@@ -444,7 +482,8 @@
   }
 
   function renderCumulative() {
-    els.gameContent.innerHTML = `<div class="score-cards">
+    if (scoreUndoGameId !== currentGame.id) { scoreUndo = []; scoreUndoGameId = currentGame.id; }
+    els.gameContent.innerHTML = `<div class="undo-bar"><button id="undo-score" class="button secondary" type="button" disabled>↶ Annuler la dernière saisie</button></div><div class="score-cards">
       ${currentGame.players.map((player, playerIndex) => `
         <article class="score-card">
           <h3>${escapeHTML(player.name)}</h3>
@@ -462,12 +501,17 @@
     </div>`;
     els.gameContent.querySelectorAll("[data-delta]").forEach(button => button.addEventListener("click", adjustQuickScore));
     els.gameContent.querySelectorAll(".custom-adjust").forEach(button => button.addEventListener("click", adjustCustomScore));
+    document.querySelector("#undo-score").addEventListener("click", undoLastScore);
+    updateUndoButton();
   }
 
   function changeCumulativeScore(playerIndex, delta) {
     currentGame.totals[playerIndex] = asScore(currentGame.totals[playerIndex]) + asScore(delta);
+    scoreUndo.push({ playerIndex, delta: asScore(delta) });
+    if (scoreUndo.length > 30) scoreUndo.shift();
     persistCurrent();
     refreshLiveScores();
+    updateUndoButton();
   }
 
   function adjustQuickScore(event) {
